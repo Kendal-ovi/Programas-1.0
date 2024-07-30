@@ -1,162 +1,150 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+from tkinter import *
+from tkinter import ttk
+from tkinter import messagebox
 
-# C extensions
-*.so
+class Interfaz:
+    def __init__(self, ventana):
+        self.ventana = ventana
+        self.productos = ("Galletas-$10", "Jugo-$8", "Gomitas-$9", "Agua-$7", "Chocolate-$5", "Donas-$11", "Fresco-$8")
+        self.cantidad = IntVar()
+        self.total = StringVar()
+        self.monto_pagado = StringVar()
+        self.vuelto = StringVar()
+        self.total_acumulado = 0
+        self.dibujar()
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+    def dibujar(self):
+        self.ventana.title("Caja Registradora")
+        self.ventana.geometry("650x550")
+        
+        Label(self.ventana, text="Selecciona tu producto: ").place(x=10, y=10)
+        Label(self.ventana, text="Selecciona la cantidad: ").place(x=10, y=60)
+        Label(self.ventana, text="Total a pagar: ").place(x=450, y=300)
+        Label(self.ventana, text="Monto pagado: ").place(x=450, y=350)
+        Label(self.ventana, text="Vuelto: ").place(x=450, y=400)
+        
+        self.combo = ttk.Combobox(self.ventana, state="readonly")
+        self.combo.place(x=10, y=35)
+        self.combo["values"] = self.productos
+        self.combo.current(0)
+        
+        Entry(self.ventana, textvariable=self.cantidad).place(x=10, y=85)
+        Entry(self.ventana, textvariable=self.total, state='readonly').place(x=520, y=300)
+        Entry(self.ventana, textvariable=self.monto_pagado).place(x=520, y=350)
+        Entry(self.ventana, textvariable=self.vuelto, state='readonly').place(x=520, y=400)
+        
+        Button(self.ventana, text="Agregar", command=self.agregar_producto).place(x=10, y=110)
+        Button(self.ventana, text="Quitar", command=self.quitar_producto).place(x=80, y=110)
+        Button(self.ventana, text="Calcular Vuelto", command=self.calcular_vuelto).place(x=450, y=450)
+        Button(self.ventana, text="Pagar", command=self.realizar_pago).place(x=550, y=450)
+        Button(self.ventana, text="Salir", command=self.salir).place(x=150, y=110)
+        
+        self.tabla = ttk.Treeview(self.ventana, columns=("Cantidad", "Subtotal"))
+        self.tabla.heading("#0", text="Producto")
+        self.tabla.heading("Cantidad", text="Cantidad")
+        self.tabla.heading("Subtotal", text="Subtotal")
+        self.tabla.place(x=10, y=150)
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
+    def agregar_producto(self):
+        texto = self.combo.get()
+        datos = texto.split("-$")
+        producto = datos[0]
+        precio = int(datos[1])
+        cantidad = self.cantidad.get()
+        
+        if cantidad <= 0:
+            messagebox.showerror("Error", "La cantidad debe ser mayor que 0")
+            return
+        
+        subtotal = precio * cantidad
+        self.tabla.insert("", END, text=producto, values=(cantidad, "$" + str(subtotal)))
+        self.total_acumulado += subtotal
+        self.total.set("$" + str(self.total_acumulado))
+        self.cantidad.set(0)  # Reinicio cantidad a 0 después de agregar el producto
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+    def quitar_producto(self):
+        seleccionado = self.tabla.selection()
+        if not seleccionado:
+            messagebox.showerror("Error", "Seleccione un producto para quitar")
+            return
+        
+        for item in seleccionado:
+            producto = self.tabla.item(item, "text")
+            cantidad, subtotal = self.tabla.item(item, "values")
+            subtotal = int(subtotal.replace("$", ""))
+            self.total_acumulado -= subtotal
+            self.tabla.delete(item)
+        
+        self.total.set("$" + str(self.total_acumulado))
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
+    def calcular_vuelto(self):
+        try:
+            pago = float(self.monto_pagado.get())
+            if pago < self.total_acumulado:
+                messagebox.showerror("Error", "El monto pagado es insuficiente")
+                return
+            vuelto = pago - self.total_acumulado
+            self.vuelto.set("$" + str(vuelto))
+        except ValueError:
+            messagebox.showerror("Error", "Ingrese un monto válido")
+    def realizar_pago(self):
+        try:
+            pago = float(self.monto_pagado.get())
+            if pago < self.total_acumulado:
+                messagebox.showerror("Error", "El monto pagado es insuficiente")
+                return
+            vuelto = pago - self.total_acumulado
+            messagebox.showinfo("Pago Realizado", f"Pago exitoso. Vuelto: ${vuelto}")
+            self.vuelto.set("$" + str(vuelto))
+            self.limpiar_datos()
+        except ValueError:
+            messagebox.showerror("Error", "Ingrese un monto válido")
 
-# Translations
-*.mo
-*.pot
+    def limpiar_datos(self):
+        self.total_acumulado = 0
+        self.total.set("")
+        self.monto_pagado.set("")
+        self.vuelto.set("")
+        for item in self.tabla.get_children():
+            self.tabla.delete(item)
 
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
+    def salir(self):
+        self.ventana.destroy()
 
-# Flask stuff:
-instance/
-.webassets-cache
+class InicioSesion:
+    def __init__(self, ventana):
+        self.ventana = ventana
+        self.ventana.title("Inicio de Sesión")
+        self.ventana.geometry("300x200")
+        
+        Label(self.ventana, text="Usuario:  ").place(x=50, y=50)
+        Label(self.ventana, text="Contraseña:").place(x=50, y=100)
+        
+        self.usuario = Entry(self.ventana)
+        self.usuario.place(x=130, y=50)
+        self.contrasena = Entry(self.ventana, show="*")
+        self.contrasena.place(x=130, y=100)
+        
+        Button(self.ventana, text="Iniciar Sesión", command=self.iniciar_sesion).place(x=110, y=150)
+        Button(self.ventana, text="Salir", command=self.salir).place(x=200, y=150)
+    
+    def iniciar_sesion(self):
+        usuario = self.usuario.get()
+        contrasena = self.contrasena.get()
+        
+        if usuario == "ken" and contrasena == "1234":
+            self.ventana.destroy()
+            ventana_principal = Tk()
+            Interfaz(ventana_principal)
+            ventana_principal.mainloop()
+        else:
+            messagebox.showerror("Error", "Usuario o contraseña incorrectos")
 
-# Scrapy stuff:
-.scrapy
+    def salir(self):
+        self.ventana.destroy()
 
-# Sphinx documentation
-docs/_build/
+if __name__ == "__main__":
+    ventana_inicio = Tk()
+    app = InicioSesion(ventana_inicio)
+    ventana_inicio.mainloop()
 
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
-
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
-
-# poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
-
-# pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#pdm.lock
-#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-#   in version control.
-#   https://pdm.fming.dev/latest/usage/project/#working-with-version-control
-.pdm.toml
-.pdm-python
-.pdm-build/
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
